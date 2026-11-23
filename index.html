@@ -120,7 +120,7 @@ body.big .cc .ch{height:84px;margin-top:6px}
 body.big .hc .ch{height:44px;margin-top:6px}
 
 /* 한눈에 보기: 여러 줄로 촘촘하게 */
-.lists{column-width:330px;column-gap:8px}
+.lists{column-width:360px;column-gap:8px}
 .lists.one{column-width:420px}
 .lsec{background:var(--card);border-radius:14px;padding:2px 4px 4px;break-inside:avoid;margin-bottom:8px}
 .lsec .sec-h{margin:6px 8px 2px;min-height:24px}
@@ -129,21 +129,21 @@ body.big .hc .ch{height:44px;margin-top:6px}
 .lsec .sec-h input{width:130px;height:28px;font-size:13px}
 .lsec .sec-h .tools{gap:4px}
 .lsec .sec-h .tools .btn{height:28px;padding:0 8px;font-size:12px;background:var(--line)}
-.row{position:relative;display:grid;grid-template-columns:20px minmax(0,1fr) minmax(40px,1fr) minmax(74px,auto);gap:8px;align-items:center;padding:4px 6px;border-radius:8px;cursor:pointer}
+.row{position:relative;display:grid;grid-template-columns:20px minmax(0,1fr) 84px 128px;gap:8px;align-items:center;padding:4px 6px;border-radius:8px;cursor:pointer}
 .row:hover{background:var(--line)}
 .row .logo{width:20px;height:20px;font-size:6px}
-.row .sp{height:20px;width:100%;max-width:120px;justify-self:center}
+.row .sp{height:20px;width:84px}
 .row .nm{min-width:0}
 .row .nm b{display:block;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row .nm .sub{display:flex;gap:4px;align-items:center;font-size:10px;color:var(--ink3);white-space:nowrap;overflow:hidden}
 .row .nm .sub .tag{font-size:9px;padding:0 4px}
-.row .px{text-align:right;min-width:74px}
+.row .px{text-align:right;min-width:0;overflow:hidden}
 .row .px > b{display:inline-block;font-size:14.5px;font-weight:700;border-radius:5px;padding:0 3px;margin-right:-3px}
 .row .px > span{display:block;font-size:11.5px;font-weight:700}
 body.big .lists{columns:2 420px;column-gap:12px}
-body.big .row{grid-template-columns:36px minmax(0,1fr) minmax(60px,1fr) minmax(90px,auto);gap:10px;padding:8px 10px}
+body.big .row{grid-template-columns:36px minmax(0,1fr) 110px 150px;gap:10px;padding:8px 10px}
 body.big .row .logo{width:36px;height:36px;font-size:11px}
-body.big .row .sp{height:30px;max-width:160px}
+body.big .row .sp{height:30px;width:110px}
 body.big .row .nm b{font-size:15px} body.big .row .nm .sub{font-size:12px}
 body.big .row .px > b{font-size:15px} body.big .row .px > span{font-size:12px}
 
@@ -832,7 +832,7 @@ async function pollKR() {
   } catch (e) {}
 }
 function krItem(code, desc) {
-  const k = "naver:" + code; if (byKey[k]) return byKey[k];
+  const k = "naver:" + code; if (byKey[k]) { const it = byKey[k]; if (it.tmp && desc && it.name === code) it.name = desc; return it; }
   return byKey[k] = {src: "naver", sym: code, name: desc || code, sub: code, dec: 0, mk: "KR", color: hueOf(code), tmp: true};
 }
 async function loadHotKR() {
@@ -840,7 +840,9 @@ async function loadHotKR() {
   try {
     const rows = await tvScan("korea", {filter: [{left: "type", operation: "equal", right: "stock"}, {left: "is_primary", operation: "equal", right: true}],
       columns: TV_COLS, sort: {sortBy: "Value.Traded", sortOrder: "desc"}, range: [0, 10]});
-    rows.forEach(r => { const o = tvRow(r.d); krItem(o.name, o.description); krTick(o.name, o); });
+    let renamed = false;
+    rows.forEach(r => { const o = tvRow(r.d); const it = krItem(o.name), before = it.name; krItem(o.name, o.description); if (it.name !== before) renamed = true; krTick(o.name, o); });
+    if (renamed) renderHots();
     setHots("hotkr", rows.map(r => ({k: "naver:" + r.d[0], vol: r.d[9]})));
   } catch (e) {}
 }
