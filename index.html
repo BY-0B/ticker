@@ -18,10 +18,10 @@
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#101013; --card:#1c1c21; --ink:#f2f4f6; --ink2:#c3c8cf; --ink3:#8b95a1; --line:#26262d; --line2:#33333b;
-  --up:#ff5b67; --up-soft:#3a1d22; --down:#4c94ff; --down-soft:#17284a; --chip:#2a2a31; --scrim:rgba(0,0,0,.6); color-scheme:dark}}
+  --up:#ff5b67; --up-soft:#3a1d22; --down:#4c94ff; --down-soft:#17284a; --chip:#2a2a31; --scrim:rgba(0,0,0,.6); --ring:rgba(255,255,255,.22); color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#101013; --card:#1c1c21; --ink:#f2f4f6; --ink2:#c3c8cf; --ink3:#8b95a1; --line:#26262d; --line2:#33333b;
-  --up:#ff5b67; --up-soft:#3a1d22; --down:#4c94ff; --down-soft:#17284a; --chip:#2a2a31; --scrim:rgba(0,0,0,.6); color-scheme:dark}
+  --up:#ff5b67; --up-soft:#3a1d22; --down:#4c94ff; --down-soft:#17284a; --chip:#2a2a31; --scrim:rgba(0,0,0,.6); --ring:rgba(255,255,255,.22); color-scheme:dark}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased}
 body{padding:0 max(14px,env(safe-area-inset-right,0px)) 32px max(14px,env(safe-area-inset-left,0px))}
@@ -54,7 +54,7 @@ button{border:0;background:none;cursor:pointer}
 .tabs button:hover:not([aria-pressed="true"]){background:var(--card)}
 
 /* 공통 카드 */
-.logo{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;flex:none;overflow:hidden;font-size:12px;font-weight:800;color:#fff;letter-spacing:-.03em}
+.logo{box-shadow:inset 0 0 0 1px var(--ring,rgba(0,0,0,.05));width:40px;height:40px;border-radius:50%;display:grid;place-items:center;flex:none;overflow:hidden;font-size:12px;font-weight:800;color:#fff;letter-spacing:-.03em}
 .tag{font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px;background:var(--chip);color:var(--ink2);white-space:nowrap}
 .tag.live{color:var(--ok)} .tag.pre{color:var(--warn)} .tag.ours{background:var(--down-soft);color:var(--down)}
 .tag.kp-up{background:var(--up-soft);color:var(--up)} .tag.kp-down{background:var(--down-soft);color:var(--down)}
@@ -89,6 +89,7 @@ svg.mini{display:block;width:100%;height:100%;overflow:visible}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:8px}
 .cc,.hc{position:relative;background:var(--card);border-radius:14px;padding:10px 12px 9px;cursor:pointer;min-width:0;display:grid;grid-template-columns:minmax(0,1fr) 60px;column-gap:6px;align-items:center;transition:transform .12s;box-shadow:0 1px 2px rgba(0,0,0,.03)}
 .cc:active,.hc:active{transform:scale(.98)}
+.cc,.hc{align-content:start}
 .cc .h,.hc .h{grid-column:1/3;grid-row:1;display:flex;align-items:center;gap:6px;min-width:0}
 .cc .h .logo,.hc .h .logo{width:18px;height:18px;font-size:7px}
 .cc .h b,.hc .h b{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
@@ -199,6 +200,7 @@ body.big .row .px > b{font-size:15px} body.big .row .px > span{font-size:12px}
 .loading .pv > span,.loading .px > span{min-width:56px;width:56px;min-height:.95em;margin-top:4px}
 .loading .px > b,.loading .px > span{display:inline-block}
 .loading .ch svg,.loading .sp svg,.loading .tg{visibility:hidden}
+.stale .pv,.stale .px{opacity:.45;transition:opacity .4s}
 .ch.sk svg,.sp.sk svg{visibility:hidden}
 .skc{pointer-events:none}
 .skc .sk-line{display:block;height:12px;margin:3px 0}
@@ -255,7 +257,8 @@ body.big .row .px > b{font-size:15px} body.big .row .px > span{font-size:12px}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:700;z-index:30;opacity:0;pointer-events:none;transition:opacity .2s}
 .toast.on{opacity:1}
 
-@media (max-width:900px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.chartbox{height:290px}}
+@media (max-width:900px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.chartbox{height:290px}
+  .src{font-size:0;gap:0;padding:6px}.btn{padding:0 9px}.top{gap:6px}}
 @media (max-width:560px){
   .hero,.cards{grid-template-columns:repeat(2,minmax(0,1fr))}
   body.big .cards,body.big .hero{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -581,11 +584,23 @@ const MKT_LABEL = {open: "장중", pre: "프리마켓", post: "애프터마켓",
 const dirty = new Set();
 function setState(k, patch) {
   const prev = S[k] || {};
+  if (prev.stale && isFinite(patch.price)) { delete prev.stale; delete prev.price; }
   const old = prev.price;
   const nx = Object.assign({}, prev, patch, {updated: Date.now()});
   if (isFinite(old) && isFinite(nx.price) && old !== nx.price) nx.flash = nx.price > old ? "up" : "down";
   S[k] = nx;
   dirty.add(k);
+}
+/* 마지막으로 받은 시세를 저장해 두었다가 다시 열면 흐리게 먼저 보여 줌 */
+const LASTF = ["price", "chg", "pct", "prev", "open", "high", "low", "vol", "mstate"];
+function saveLast() {
+  const o = {};
+  activeKeys().forEach(k => { const st = S[k]; if (st && isFinite(st.price) && !st.stale) { o[k] = {}; LASTF.forEach(f => { if (st[f] != null) o[k][f] = st[f]; }); } });
+  ls.setJ("last", {t: Date.now(), s: o});
+}
+function loadLast() {
+  const c = ls.getJ("last"); if (!c || !c.s || Date.now() - c.t > 3 * 86400000) return;
+  Object.entries(c.s).forEach(([k, v]) => { if (!S[k]) { S[k] = Object.assign({}, v, {stale: true}); dirty.add(k); } });
 }
 function sparkPts(k) {
   const st = S[k]; if (!st) return [];
@@ -667,7 +682,7 @@ async function loadCNBCSparks(force) {
    업비트는 브라우저에서 오는 일반 요청을 10초에 한 번 정도만 받아 줍니다.
    그래서 시세는 웹소켓(실시간)으로 받고, 나머지 요청은 줄 세워서 천천히 보냅니다. */
 const UPBIT = "https://api.upbit.com/v1/";
-const UQ = {q: [], busy: false, next: Date.now() + 11000};
+const UQ = {q: [], busy: false, next: Date.now()};
 const UQ_GAP = 10500;
 /* pri: 3 추가 확인, 2 상세 차트, 1 거래대금 순위·코인 이름, 0 작은 차트 */
 function upbitGet(path, pri = 0) {
@@ -686,6 +701,7 @@ async function pumpUQ() {
     const wait = UQ.next - Date.now(); if (wait > 0) await sleep(Math.min(wait, 1000));
     if (UQ.next > Date.now()) continue;           // 기다리는 동안 더 급한 요청이 끼어들 수 있게 1초씩 확인
     const job = UQ.q.shift();
+    if (job.run) { await job.run(); UQ.next = Date.now() + UQ_GAP; continue; }
     let ok = null, err = null;
     try {
       const r = await fetch(UPBIT + job.path, {cache: "no-store"});
@@ -708,21 +724,32 @@ function upbitTicker(t) {
   SRC.upbit.t = Date.now();
 }
 let upWS = null, upPing = null, wsSubscribed = "";
+/* 업비트는 이 주소에서 오는 연결과 요청을 합쳐 10초에 1번만 받아 줌. 그래서 웹소켓 연결도 같은 줄의 맨 앞에 세움 */
 function connectUpbit() {
-  try { upWS = new WebSocket("wss://api.upbit.com/websocket/v1"); } catch (e) { return setTimeout(connectUpbit, 15000); }
+  if (UQ.q.some(j => j.run)) return;
+  UQ.q.unshift({run: openUpbit, pri: 9}); pumpUQ();
+}
+function openUpbit() {
+  return new Promise(done => {
+  try { upWS = new WebSocket("wss://api.upbit.com/websocket/v1"); } catch (e) { setTimeout(connectUpbit, 3000); return done(); }
+  setTimeout(done, 3000);
   upWS.binaryType = "arraybuffer";
   const dec = new TextDecoder();
   upWS.onopen = () => {
-    const codes = wsCodes(); wsSubscribed = codes.join(",");
-    if (codes.length) upWS.send(JSON.stringify([{ticket: "colin-" + Date.now()}, {type: "ticker", codes}]));
+    subUpbit(); done();
     clearInterval(upPing); upPing = setInterval(() => { try { upWS.send("PING"); } catch (e) {} }, 60000);
   };
   upWS.onmessage = m => { try { const t = JSON.parse(typeof m.data === "string" ? m.data : dec.decode(m.data)); if (t.code) upbitTicker(t); } catch (e) {} };
-  upWS.onclose = () => { clearInterval(upPing); setTimeout(connectUpbit, 12000); };
+  upWS.onclose = () => { clearInterval(upPing); done(); setTimeout(connectUpbit, 2000); };
   upWS.onerror = () => { try { upWS.close(); } catch (e) {} };
+  });
+}
+function subUpbit() {
+  const codes = wsCodes(); wsSubscribed = codes.join(",");
+  if (codes.length) try { upWS.send(JSON.stringify([{ticket: "colin-" + Date.now()}, {type: "ticker", codes}])); } catch (e) {}
 }
 /* 받을 코인이 바뀌면 웹소켓 다시 연결 */
-function syncUpbitWS() { if (upWS && upWS.readyState === 1 && wsCodes().join(",") !== wsSubscribed) { try { upWS.close(); } catch (e) {} } }
+function syncUpbitWS() { if (upWS && upWS.readyState === 1 && wsCodes().join(",") !== wsSubscribed) subUpbit(); }
 async function upbitFallback() {
   if (Date.now() - SRC.upbit.t < 30000) return;
   const codes = wsCodes(); if (!codes.length) return;
@@ -848,15 +875,31 @@ async function loadHotKR() {
     setHots("hotkr", rows.map(r => ({k: "naver:" + r.d[0], vol: r.d[9], name: krName(r.d[1])})));
   } catch (e) {}
 }
+/* 미국 거래대금 상위에 자주 오는데 목록에 없는 종목의 한글 이름 */
+const US_KO = {ANT:"앤트로픽",SPCX:"스페이스X",SNDK:"샌디스크",WDC:"웨스턴디지털",STX:"시게이트",LLY:"일라이 릴리",WMT:"월마트",COST:"코스트코",UNH:"유나이티드헬스",
+  XOM:"엑슨모빌",GOOG:"알파벳 C",CRWV:"코어위브",OKLO:"오클로",RKLB:"로켓랩",APP:"앱러빈",DELL:"델",ANET:"아리스타",VRT:"버티브",GEV:"GE 버노바",BA:"보잉",
+  MRVL:"마벨",CSCO:"시스코",IBM:"IBM",GS:"골드만삭스",BAC:"뱅크오브아메리카",MA:"마스터카드",PYPL:"페이팔",SHOP:"쇼피파이",SNOW:"스노우플레이크",NBIS:"네비우스",
+  CRCL:"서클",BMNR:"비트마인",LRCX:"램리서치",AMAT:"어플라이드 머티리얼즈",KLAC:"KLA",TXN:"텍사스 인스트루먼트",HIMS:"힘스앤허스",RDDT:"레딧",NVO:"노보 노디스크",
+  CVNA:"카바나",ABNB:"에어비앤비",SNAP:"스냅",PFE:"화이자",MRK:"머크",JNJ:"존슨앤드존슨",PG:"P&G",HD:"홈디포",MCD:"맥도날드",SBUX:"스타벅스",CVX:"셰브론",
+  WFC:"웰스파고",C:"씨티그룹",MS:"모건스탠리",T:"AT&T",VZ:"버라이즌",PEP:"펩시코",CMG:"치폴레",LULU:"룰루레몬",ROKU:"로쿠",RIVN:"리비안",LCID:"루시드",NIO:"니오",
+  PDD:"핀둬둬",JD:"징둥",BIDU:"바이두",SMR:"뉴스케일",CEG:"컨스텔레이션",VST:"비스트라",ACHR:"아처",JOBY:"조비",ASTS:"AST 스페이스모바일",RGTI:"리게티",QBTS:"디웨이브",
+  CLS:"셀레스티카",CIEN:"시에나",COHR:"코히런트",LITE:"루멘텀",ALAB:"아스테라 랩스",CRDO:"크레도",DDOG:"데이터독",NET:"클라우드플레어",CRWD:"크라우드스트라이크",
+  PANW:"팔로알토",ZS:"지스케일러",NOW:"서비스나우",INTU:"인튜이트",UNP:"유니온퍼시픽",CAT:"캐터필러",DE:"디어",GE:"GE 에어로스페이스",LMT:"록히드마틴",RTX:"RTX",
+  TGT:"타깃",BRK_B:"버크셔 해서웨이 B",OPEN:"오픈도어",GME:"게임스탑",AMC:"AMC",MARA:"마라",RIOT:"라이엇",CLSK:"클린스파크",IREN:"아이렌",CORZ:"코어 사이언티픽",
+  GLXY:"갤럭시 디지털",BLSH:"불리시",FIG:"피그마",KLAR:"클라르나",CRM:"세일즈포스"};
+const usName = d => String(d || "").replace(/,?\s*\b(Inc\.?|Corporation|Corp\.?|Company|Co\.|Ltd\.?|PLC|plc|N\.V\.|S\.A\.|Holdings?|Class [A-C]|PBC|Incorporated|Limited|Group)(?=[\s,.]|$)/g, "").replace(/[\s,.]+$/, "").trim();
 async function loadHotUS() {
   if (!hasSpecial("hotus")) return;
   try {
     const rows = await tvScan("america", {filter: [{left: "type", operation: "equal", right: "stock"}, {left: "is_primary", operation: "equal", right: true}],
       columns: TV_COLS, sort: {sortBy: "Value.Traded", sortOrder: "desc"}, range: [0, 10]});
+    let renamed = false;
     rows.forEach(r => {
-      const sym = r.d[0].replace("/", "."), k = "cnbc:" + sym;
-      if (!byKey[k]) byKey[k] = {src: "cnbc", sym, name: r.d[1] || sym, sub: sym, ab: sym.replace(/[^A-Za-z0-9]/g, "").slice(0, 4), dec: 2, usd: true, mk: "US", color: hueOf(sym), tmp: true};
+      const sym = r.d[0].replace("/", "."), k = "cnbc:" + sym, name = US_KO[sym.replace(".", "_")] || usName(r.d[1]) || sym;
+      if (!byKey[k]) byKey[k] = {src: "cnbc", sym, name, sub: sym, ab: sym.replace(/[^A-Za-z0-9]/g, "").slice(0, 4), dec: 2, usd: true, mk: "US", color: hueOf(sym), tmp: true};
+      else if (byKey[k].tmp && byKey[k].name !== name) { byKey[k].name = name; renamed = true; }
     });
+    if (renamed) renderHots();
     setHots("hotus", rows.map(r => ({k: "cnbc:" + r.d[0].replace("/", "."), vol: r.d[9], usd: true, name: byKey["cnbc:" + r.d[0].replace("/", ".")]?.name})));
   } catch (e) {}
 }
@@ -1017,7 +1060,7 @@ function paint(k, noFlash) {
     r.tags.replaceChildren(...(r.kind === "row" ? [el("span", null, r.sub)] : []),
       ...(r.rank ? [el("span", {class: "tag rank"}, `${r.rank}위 ${r.usd ? "$" + fmtUSD(r.vol) : fmtKRW(r.vol ?? st?.vol)}`)] : []), ...tagsFor(it, st));
     const ready = st && isFinite(st.price);
-    if (r.node) r.node.classList.toggle("loading", !ready);
+    if (r.node) { r.node.classList.toggle("loading", !ready); r.node.classList.toggle("stale", !!st?.stale); }
     r.sp.classList.toggle("sk", !!ready && pts.length < 2 && !(it.src === "naver" && !naverProxy));
     const sig = pts.length + ":" + pts[pts.length - 1] + ":" + d + ":" + (st?.prev);
     if (r.spSig !== sig) { r.spSig = sig; r.sp.replaceChildren(miniChart(pts, d, r.kind === "row" ? NaN : goodPrev(st))); }
@@ -1233,6 +1276,13 @@ function connectBox() {
     el("span", null, "국내 개별 주식은 무료 중계 서버(Cloudflare) 주소를 한 번 넣어야 시세가 나와요."),
     el("button", {onclick: openSettings}, "중계 서버 주소 넣기"));
 }
+/* 맨 위 줄: 칸 수를 고르게 나눠 한 장만 남는 줄이 없게 */
+function fitHero() {
+  const h = $("hero"), n = h.children.length; if (!n) return;
+  const min = density === "big" ? 220 : 140, per = Math.max(2, Math.floor((h.clientWidth + 8) / (min + 8)));
+  h.style.gridTemplateColumns = `repeat(${Math.ceil(n / Math.ceil(n / per))},minmax(0,1fr))`;
+}
+addEventListener("resize", () => { clearTimeout(fitHero.t); fitHero.t = setTimeout(fitHero, 100); });
 function build() {
   for (const k in REF) delete REF[k];
   document.body.classList.toggle("editing", editing);
@@ -1243,6 +1293,7 @@ function build() {
   hero.dataset.list = "hero";
   hero.replaceChildren(...CFG.hero.filter(k => byKey[k]).map(k => cardEl(byKey[k], {list: "hero"}, "hc")));
   hero.style.display = CFG.hero.length ? "" : "none";
+  fitHero();
   // 보기, 탭
   $("viewSeg").replaceChildren(...[["chart", "카드"], ["list", "한눈에"]].map(([v, l]) =>
     el("button", {"aria-pressed": String(view === v), onclick: () => { view = v; ls.set("view", v); build(); }}, l)));
@@ -1748,6 +1799,7 @@ tickClock(); setInterval(tickClock, 1000);
 HOTS.hot.forEach(h => coinItem(h.k.slice(6)));
 HOTS.hotkr.forEach(h => krItem(h.k.slice(6), h.name));
 HOTS.hotus.forEach(h => { const sym = h.k.slice(5); if (!byKey[h.k]) byKey[h.k] = {src: "cnbc", sym, name: h.name || sym, sub: sym, ab: sym.slice(0, 4), dec: 2, usd: true, mk: "US", color: hueOf(sym), tmp: true}; });
+loadLast();
 build();
 connectUpbit();
 connectBinance();
@@ -1758,6 +1810,8 @@ loadHotKR(); loadHotUS();
 loadCoinGeckoSparks();
 loadHot().then(() => { loadMarkets(1); loadUpbitSparks(); });
 setInterval(flush, 400);
+setInterval(saveLast, 20000);
+addEventListener("pagehide", saveLast);
 setInterval(pollCNBC, 5000);
 setInterval(pollKR, 5000);
 setInterval(loadHotKR, 60000);
