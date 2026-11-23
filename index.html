@@ -97,7 +97,7 @@ svg.mini{display:block;width:100%;height:100%;overflow:visible}
 .cc .pv > b,.hc .pv > b{grid-column:1/3;grid-row:2;justify-self:start;font-size:18px;font-weight:800;letter-spacing:-.02em;margin-top:4px;white-space:nowrap;max-width:100%;overflow:hidden}
 .cc .pv > span,.hc .pv > span{grid-column:1;grid-row:3;font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cc .ch,.hc .ch{grid-column:2;grid-row:3;height:24px}
-.cc .tg,.hc .tg{grid-column:1/3;grid-row:4;display:flex;gap:4px;overflow:hidden;margin-top:5px}
+.cc .tg,.hc .tg{grid-column:1/3;grid-row:4;display:flex;flex-wrap:wrap;gap:3px 4px;margin-top:5px}
 .cc .tg:empty,.hc .tg:empty{display:none}
 .cc .tg .tag,.hc .tg .tag{font-size:10.5px;padding:0 5px}
 .hc .pv > b{font-size:20px}
@@ -135,7 +135,7 @@ body.big .hc .ch{height:44px;margin-top:6px}
 .row .sp{height:20px;width:84px}
 .row .nm{min-width:0}
 .row .nm b{display:block;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.row .nm .sub{display:flex;gap:4px;align-items:center;font-size:10px;color:var(--ink3);white-space:nowrap;overflow:hidden}
+.row .nm .sub{display:flex;flex-wrap:wrap;gap:2px 4px;align-items:center;font-size:10px;color:var(--ink3)}
 .row .nm .sub .tag{font-size:9px;padding:0 4px}
 .row .px{text-align:right;min-width:0;overflow:hidden}
 .row .px > b{display:inline-block;font-size:14.5px;font-weight:700;border-radius:5px;padding:0 3px;margin-right:-3px}
@@ -806,7 +806,7 @@ function setHots(sp, list) {
    국내주식은 무료 공개 시세라 20분 늦게 옵니다. 실시간을 원하면 설정에서 네이버 중계 서버를 넣으면 됨 */
 const TV = "https://scanner.tradingview.com/";
 async function tvScan(market, body) {
-  const r = await fetch(TV + market + "/scan", {method: "POST", body: JSON.stringify(body)});
+  const r = await fetch(TV + market + "/scan", {method: "POST", body: JSON.stringify(Object.assign({options: {lang: "ko"}}, body))});
   if (!r.ok) throw new Error(r.status);
   return (await r.json()).data || [];
 }
@@ -831,9 +831,11 @@ async function pollKR() {
     SRC.naver.t = Date.now();
   } catch (e) {}
 }
+/* 국내 종목 이름: TradingView 한글 이름에서 "보통주" 같은 꼬리말을 뺌 */
+const krName = d => String(d || "").replace(/\s*(보통주|우선주|1우선주|2우선주)$/, "").trim();
 function krItem(code, desc) {
-  const k = "naver:" + code; if (byKey[k]) { const it = byKey[k]; if (it.tmp && desc && it.name === code) it.name = desc; return it; }
-  return byKey[k] = {src: "naver", sym: code, name: desc || code, sub: code, dec: 0, mk: "KR", color: hueOf(code), tmp: true};
+  const k = "naver:" + code; if (byKey[k]) { const it = byKey[k]; if (it.tmp && desc) it.name = krName(desc); return it; }
+  return byKey[k] = {src: "naver", sym: code, name: krName(desc) || code, sub: code, dec: 0, mk: "KR", color: hueOf(code), tmp: true};
 }
 async function loadHotKR() {
   if (!hasSpecial("hotkr")) return;
@@ -843,7 +845,7 @@ async function loadHotKR() {
     let renamed = false;
     rows.forEach(r => { const o = tvRow(r.d); const it = krItem(o.name), before = it.name; krItem(o.name, o.description); if (it.name !== before) renamed = true; krTick(o.name, o); });
     if (renamed) renderHots();
-    setHots("hotkr", rows.map(r => ({k: "naver:" + r.d[0], vol: r.d[9]})));
+    setHots("hotkr", rows.map(r => ({k: "naver:" + r.d[0], vol: r.d[9], name: krName(r.d[1])})));
   } catch (e) {}
 }
 async function loadHotUS() {
@@ -855,7 +857,7 @@ async function loadHotUS() {
       const sym = r.d[0].replace("/", "."), k = "cnbc:" + sym;
       if (!byKey[k]) byKey[k] = {src: "cnbc", sym, name: r.d[1] || sym, sub: sym, ab: sym.replace(/[^A-Za-z0-9]/g, "").slice(0, 4), dec: 2, usd: true, mk: "US", color: hueOf(sym), tmp: true};
     });
-    setHots("hotus", rows.map(r => ({k: "cnbc:" + r.d[0].replace("/", "."), vol: r.d[9], usd: true})));
+    setHots("hotus", rows.map(r => ({k: "cnbc:" + r.d[0].replace("/", "."), vol: r.d[9], usd: true, name: byKey["cnbc:" + r.d[0].replace("/", ".")]?.name})));
   } catch (e) {}
 }
 
@@ -1386,7 +1388,7 @@ async function addItem(list, cand) {
       } else {
         const rows = await tvScan("korea", {symbols: {tickers: ["KRX:" + cand.sym]}, columns: TV_COLS});
         if (!rows.length) return "한국거래소에서 이 종목코드를 못 찾았어요.";
-        if (name === cand.sym) name = rows[0].d[1] || name;
+        if (name === cand.sym) name = krName(rows[0].d[1]) || name;
       }
       it = {src: "naver", sym: cand.sym, name, sub: cand.sym, dec: 0, mk: "KR", color: hueOf(cand.sym), custom: true};
     }
@@ -1744,8 +1746,8 @@ function tickClock() {
 applyTheme();
 tickClock(); setInterval(tickClock, 1000);
 HOTS.hot.forEach(h => coinItem(h.k.slice(6)));
-HOTS.hotkr.forEach(h => krItem(h.k.slice(6)));
-HOTS.hotus.forEach(h => { const sym = h.k.slice(5); if (!byKey[h.k]) byKey[h.k] = {src: "cnbc", sym, name: sym, sub: sym, ab: sym.slice(0, 4), dec: 2, usd: true, mk: "US", color: hueOf(sym), tmp: true}; });
+HOTS.hotkr.forEach(h => krItem(h.k.slice(6), h.name));
+HOTS.hotus.forEach(h => { const sym = h.k.slice(5); if (!byKey[h.k]) byKey[h.k] = {src: "cnbc", sym, name: h.name || sym, sub: sym, ab: sym.slice(0, 4), dec: 2, usd: true, mk: "US", color: hueOf(sym), tmp: true}; });
 build();
 connectUpbit();
 connectBinance();
