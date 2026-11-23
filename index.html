@@ -1014,7 +1014,7 @@ function paint(k, noFlash) {
       ...(r.rank ? [el("span", {class: "tag rank"}, `${r.rank}위 ${r.usd ? "$" + fmtUSD(r.vol) : fmtKRW(r.vol ?? st?.vol)}`)] : []), ...tagsFor(it, st));
     const ready = st && isFinite(st.price);
     if (r.node) r.node.classList.toggle("loading", !ready);
-    r.sp.classList.toggle("sk", !!ready && pts.length < 2);
+    r.sp.classList.toggle("sk", !!ready && pts.length < 2 && !(it.src === "naver" && !naverProxy));
     const sig = pts.length + ":" + pts[pts.length - 1] + ":" + d + ":" + (st?.prev);
     if (r.spSig !== sig) { r.spSig = sig; r.sp.replaceChildren(miniChart(pts, d, r.kind === "row" ? NaN : goodPrev(st))); }
   }
