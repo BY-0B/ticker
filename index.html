@@ -1278,7 +1278,12 @@ function connectBox() {
     el("span", null, "국내 개별 주식은 무료 중계 서버(Cloudflare) 주소를 한 번 넣어야 시세가 나와요."),
     el("button", {onclick: openSettings}, "중계 서버 주소 넣기"));
 }
-function applyZoom() { document.querySelector(".wrap").style.zoom = zoom === 1 ? "" : String(zoom); }
+function applyZoom() {
+  const w = document.querySelector(".wrap"), on = zoom !== 1;
+  w.style.zoom = on ? String(zoom) : "";
+  w.style.maxWidth = on ? `${1600 / zoom}px` : "";   // 최대 폭도 줄인 만큼 늘려야 화면을 그대로 채움
+  if (document.getElementById("hero")) fitHero();
+}
 /* 맨 위 줄: 칸 수를 고르게 나눠 한 장만 남는 줄이 없게 */
 function fitHero() {
   const h = $("hero"), n = h.children.length; if (!n) return;
