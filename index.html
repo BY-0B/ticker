@@ -13,7 +13,7 @@
   --bg:#f2f4f6; --card:#ffffff; --ink:#191f28; --ink2:#4e5968; --ink3:#8b95a1; --line:#f2f4f6; --line2:#e5e8eb;
   --up:#f04452; --up-soft:#fff0f1; --down:#3182f6; --down-soft:#ebf3ff; --flat:#8b95a1;
   --chip:#f2f4f6; --accent:#3182f6; --ok:#03b26c; --warn:#ff9f00; --danger:#f04452; --scrim:rgba(0,0,0,.45);
-  --font:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+  --font:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo",Roboto,"Noto Sans KR",system-ui,sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
@@ -27,7 +27,13 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font)
 body{padding:0 max(14px,env(safe-area-inset-right,0px)) 32px max(14px,env(safe-area-inset-left,0px))}
 button,input,select{font:inherit;color:inherit}
 button{border:0;background:none;cursor:pointer}
-.num{font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.num{font-variant-numeric:tabular-nums;letter-spacing:-.01em;white-space:nowrap}
+.nw{white-space:nowrap}
+/* 등락 한 줄: 등락률(.cp)을 먼저 두고 거꾸로 배치. 자리가 모자라면 등락폭(.ca)이 보이지 않는 둘째 줄로 밀려 숨는다 */
+.chg2{display:flex!important;flex-direction:row-reverse;flex-wrap:wrap;column-gap:4px;height:1.4em;line-height:1.4;overflow:hidden;white-space:nowrap;min-width:0}
+.chg2.end{justify-content:flex-start}
+.chg2.start{justify-content:flex-end}
+.chg2 > span{flex:none}
 .wrap{max-width:1600px;margin:0 auto}
 .up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--flat)}
 :focus-visible{outline:2.5px solid var(--accent);outline-offset:2px}
@@ -98,7 +104,8 @@ svg.mini{display:block;width:100%;height:100%;overflow:visible}
 .cc .pv > b,.hc .pv > b{grid-column:1/3;grid-row:2;justify-self:start;font-size:18px;font-weight:800;letter-spacing:-.02em;margin-top:4px;white-space:nowrap;max-width:100%;overflow:hidden}
 .cc .pv > span,.hc .pv > span{grid-column:1;grid-row:3;font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cc .ch,.hc .ch{grid-column:2;grid-row:3;height:24px}
-.cc .tg,.hc .tg{grid-column:1/3;grid-row:4;display:flex;flex-wrap:wrap;gap:3px 4px;margin-top:5px}
+.cc .tg,.hc .tg{grid-column:1/3;grid-row:4;display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;max-height:17px;overflow:hidden}
+.tg .tag,.row .nm .sub .tag{flex:none;line-height:16px}
 .cc .tg:empty,.hc .tg:empty{display:none}
 .cc .tg .tag,.hc .tg .tag{font-size:10.5px;padding:0 5px}
 .hc .pv > b{font-size:20px}
@@ -136,8 +143,9 @@ body.big .hc .ch{height:44px;margin-top:6px}
 .row .sp{height:20px;width:84px}
 .row .nm{min-width:0}
 .row .nm b{display:block;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.row .nm .sub{display:flex;flex-wrap:wrap;gap:2px 4px;align-items:center;font-size:10px;color:var(--ink3)}
-.row .nm .sub .tag{font-size:9px;padding:0 4px}
+.row .nm .sub{display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:10px;color:var(--ink3);max-height:16px;line-height:16px;overflow:hidden}
+.row .nm .sub .code{flex:1 1 0;max-width:max-content;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .nm .sub .tag{font-size:9px;padding:0 4px;line-height:14px}
 .row .px{text-align:right;min-width:0;overflow:hidden}
 .row .px > b{display:inline-block;font-size:14.5px;font-weight:700;border-radius:5px;padding:0 3px;margin-right:-3px}
 .row .px > span{display:block;font-size:11.5px;font-weight:700}
@@ -145,7 +153,7 @@ body.big .lists{columns:2 420px;column-gap:12px}
 body.big .row{grid-template-columns:36px minmax(0,1fr) 110px 150px;gap:10px;padding:8px 10px}
 body.big .row .logo{width:36px;height:36px;font-size:11px}
 body.big .row .sp{height:30px;width:110px}
-body.big .row .nm b{font-size:15px} body.big .row .nm .sub{font-size:12px}
+body.big .row .nm b{font-size:15px} body.big .row .nm .sub{font-size:12px;max-height:18px;line-height:18px}
 body.big .row .px > b{font-size:15px} body.big .row .px > span{font-size:12px}
 
 /* 편집: 꾹 누르면 아이폰처럼 흔들리고, 끌어서 옮김 */
@@ -180,7 +188,7 @@ body.big .row .px > b{font-size:15px} body.big .row .px > span{font-size:12px}
 .tip .th small{font-size:11px;color:var(--ink3);display:block}
 .tip .tp{display:flex;align-items:baseline;gap:8px;margin-top:8px;flex-wrap:wrap}
 .tip .tp > b{font-size:22px;font-weight:800}
-.tip .tp > span{font-size:13px;font-weight:700}
+.tip .tp > span{font-size:13px;font-weight:700;white-space:nowrap}
 .tip .tch{height:70px;margin-top:6px}
 .tip .rng2{margin-top:8px}
 .tip .rng2 .bar{position:relative;height:6px;border-radius:3px;background:var(--line2);margin:6px 0 3px}
@@ -469,6 +477,27 @@ function fmt(n, it, opt = {}) {
   return s;
 }
 const pctTxt = p => isFinite(p) ? `${sign(p)}${Math.abs(p).toFixed(2)}%` : "-";
+/* 숫자 양식: 등락률은 항상 부호 + 소수 둘째 자리 + %, 등락폭은 가격과 같은 자릿수.
+   숫자는 절대 두 줄로 넘어가지 않는다. 자리가 모자라면 등락폭을 먼저 숨기고 등락률은 끝까지 남긴다 */
+const chgAmt = (st, it) => isFinite(st?.chg) ? sign(st.chg) + fmt(Math.abs(st.chg), it, {noUnit: true}) : "";
+function setChg(node, amt, pct, cls) {
+  node.className = "chg2 " + cls;
+  if (node._a === amt && node._p === pct) return;
+  node._a = amt; node._p = pct;
+  node.replaceChildren(el("span", {class: "cp"}, pct), ...(amt ? [el("span", {class: "ca"}, amt)] : []));
+}
+/* 숫자가 칸보다 넓으면 (글꼴이 넓게 나올 때 등) 잘리거나 넘어가지 않게 글자를 최대 70%까지 줄임 */
+let fitGen = 0;
+function fitNum(node, inner) {
+  const key = fitGen + ":" + node.textContent.length;
+  if (node._fit === key) return;
+  node._fit = key; node.style.fontSize = "";
+  const w = node.clientWidth, need = (inner || node).scrollWidth;
+  if (!w || need <= w + 1) return;
+  const fs = parseFloat(getComputedStyle(node).fontSize);
+  node.style.fontSize = Math.max(fs * 0.7, Math.floor(fs * w / need * 10) / 10) + "px";
+}
+addEventListener("resize", () => { fitGen++; clearTimeout(fitNum.t); fitNum.t = setTimeout(() => Object.keys(REF).forEach(k => paint(k, true)), 150); });
 function chgText(st, it) {
   if (!st || !isFinite(st.pct)) return "-";
   const c = isFinite(st.chg) ? sign(st.chg) + fmt(Math.abs(st.chg), it, {noUnit: true}) + " " : "";
@@ -1054,12 +1083,11 @@ function paint(k, noFlash) {
   for (const r of refs) {
     const txt = st ? fmt(st.price, it, {noUnit: (r.kind !== "row") && it.src === "upbit"}) : "-";
     setNum(r.px, txt, noFlash ? null : st?.flash);
-    if (r.kind === "row") { r.chg.textContent = chgText(st, it); r.chg.className = d; }
-    else {
-      r.chg.textContent = st && isFinite(st.pct) ? (density === "big" ? (isFinite(st.chg) ? sign(st.chg) + fmt(Math.abs(st.chg), it, {noUnit: true}) + " " : "") : "") + pctTxt(st.pct) : "-";
-      r.chg.className = "num " + d;
-    }
-    r.tags.replaceChildren(...(r.kind === "row" ? [el("span", null, r.sub)] : []),
+    const ok = st && isFinite(st.pct);
+    if (r.kind === "row") setChg(r.chg, ok ? chgAmt(st, it) : "", ok ? "(" + pctTxt(st.pct) + ")" : "-", "num end " + d);
+    else setChg(r.chg, ok && density === "big" ? chgAmt(st, it) : "", ok ? pctTxt(st.pct) : "-", "num start " + d);
+    fitNum(r.px); fitNum(r.chg, r.chg.firstChild);
+    r.tags.replaceChildren(...(r.kind === "row" ? [el("span", {class: "code"}, r.sub)] : []),
       ...(r.rank ? [el("span", {class: "tag rank"}, `${r.rank}위 ${r.usd ? "$" + fmtUSD(r.vol) : fmtKRW(r.vol ?? st?.vol)}`)] : []), ...tagsFor(it, st));
     const ready = st && isFinite(st.price);
     if (r.node) { r.node.classList.toggle("loading", !ready); r.node.classList.toggle("stale", !!st?.stale); }
@@ -1292,6 +1320,7 @@ function fitHero() {
 }
 addEventListener("resize", () => { clearTimeout(fitHero.t); fitHero.t = setTimeout(fitHero, 100); });
 function build() {
+  fitGen++;
   for (const k in REF) delete REF[k];
   document.body.classList.toggle("editing", editing);
   $("editBtn").textContent = editing ? "완료" : "편집";
@@ -1543,7 +1572,7 @@ function liveDetail() {
   if (!hovering) {
     setNum(D.big, fmt(st.price, it), isFinite(D.lastP) && st.price !== D.lastP ? (st.price > D.lastP ? "up" : "down") : null);
     D.lastP = st.price;
-    D.chg.className = dir(st.pct); D.chg.textContent = chgText(st, it);
+    D.chg.className = "nw " + dir(st.pct); D.chg.textContent = chgText(st, it);
     const pr = periodReturn();
     D.when.textContent = pr && period !== "1D" ? `${PERIODS.find(x => x[0] === period)[1]} 동안 ${pr}` : "";
   }
@@ -1643,7 +1672,7 @@ function drawChart() {
     const price = v.value ?? v.close, b0 = periodBase();
     setNum(D.big, fmt(price, it), null); D.lastP = NaN;
     const ch = (price / b0 - 1) * 100;
-    D.chg.className = dir(ch); D.chg.textContent = `${sign(price - b0)}${fmt(Math.abs(price - b0), it, {noUnit: true})} (${pctTxt(ch)})`;
+    D.chg.className = "nw " + dir(ch); D.chg.textContent = `${sign(price - b0)}${fmt(Math.abs(price - b0), it, {noUnit: true})} (${pctTxt(ch)})`;
     D.when.textContent = new Date((p.time - TZOFF) * 1000).toLocaleString("ko-KR", intraday ? {month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false} : {year: "numeric", month: "long", day: "numeric"});
   });
 }
