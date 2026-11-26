@@ -378,13 +378,13 @@ const key = it => it.src + ":" + it.sym;
 
 /* 처음 화면 구성 */
 const DEFAULT_CFG = () => ({
-  v: 5,
+  v: 6,
   hero: ["cnbc:.KS11", "cnbc:.KQ11", "cnbc:.SPX", "cnbc:.IXIC", "cnbc:.SOX", "upbit:KRW-BTC", "upbit:KRW-CTC", "cnbc:KRW="],
   groups: [
     {id: "idx", name: "지수", keys: [".KS11", ".KQ11", ".SPX", ".IXIC", ".SOX", ".DJI", ".VIX", ".N225", ".HSI", ".SSEC"].map(s => "cnbc:" + s)},
     {id: "fx", name: "환율·금리·원자재", keys: ["KRW=", "JPYKRW=", "EURKRW=", ".DXY", "US10Y", "@GC.1", "@SI.1", "@HG.1", "@CL.1"].map(s => "cnbc:" + s)},
     {id: "hot", name: "코인 거래대금 상위", special: "hot", keys: []},
-    {id: "coin", name: "코인", sort: "pct", keys: ["CTC", "USDS", "SKY", "BTC", "ETH", "XRP", "SOL", "DOGE", "USDT"].map(s => "upbit:KRW-" + s)},
+    {id: "hotup", name: "코인 상승률 상위", special: "hotup", keys: []},
     {id: "kr", name: "국내주식", keys: ["005930", "000660", "373220", "005380", "035420", "035720", "068270", "105560"].map(s => "naver:" + s)},
     {id: "hotkr", name: "국내 거래대금 상위", special: "hotkr", keys: []},
     {id: "us", name: "해외주식", keys: ["NVDA", "AAPL", "MSFT", "GOOGL", "AMZN", "META", "TSLA"].map(s => "cnbc:" + s)},
@@ -426,7 +426,15 @@ function loadCfg() {
     if (fx && !fx.keys.includes("cnbc:@HG.1")) { const at = fx.keys.indexOf("cnbc:@SI.1"); fx.keys.splice(at < 0 ? fx.keys.length : at + 1, 0, "cnbc:@HG.1"); }
     c.v = 5; ls.setJ("cfg", c);
   }
-  if (c.v !== 5) return DEFAULT_CFG();
+  if (c.v === 5) {   // 코인 묶음 자리에 업비트 원화 코인 전체 상승률 상위
+    if (!c.groups.some(g => g.id === "hotup")) {
+      const g = {id: "hotup", name: "코인 상승률 상위", special: "hotup", keys: []};
+      const at = c.groups.findIndex(x => x.id === "coin");
+      if (at < 0) c.groups.splice((c.groups.findIndex(x => x.id === "hot") + 1) || c.groups.length, 0, g); else c.groups[at] = g;
+    }
+    c.v = 6; ls.setJ("cfg", c);
+  }
+  if (c.v !== 6) return DEFAULT_CFG();
   c.custom = c.custom || {};
   c.groups = c.groups.filter(g => g && g.id && Array.isArray(g.keys));
   return c;
@@ -456,10 +464,11 @@ if (view !== "chart" && view !== "list") view = "chart";
 /* 특별 묶음 (거래대금 순위): 목록이 자동으로 바뀜 */
 const SPECIALS = {
   hot:   {name: "코인 거래대금 상위", src: "업비트 · 24시간", note: "24시간 거래대금 1~10위 · 30초마다"},
+  hotup: {name: "코인 상승률 상위", src: "업비트 · 오늘 0시 대비", note: "원화 코인 전체 중 상승률 1~10위 · 30초마다"},
   hotkr: {name: "국내 거래대금 상위", src: "한국거래소 · 오늘", note: "오늘 거래대금 1~10위 · 20분 늦은 시세"},
   hotus: {name: "미국 거래대금 상위", src: "미국 · 오늘", note: "오늘 거래대금 1~10위 · 1분마다"},
 };
-const HOTS = Object.assign({hot: [], hotkr: [], hotus: []}, ls.getJ("hots") || {});
+const HOTS = Object.assign({hot: [], hotup: [], hotkr: [], hotus: []}, ls.getJ("hots") || {});
 const groupKeys = g => g.special ? (HOTS[g.special] || []).map(h => h.k) : g.keys;
 function activeKeys() {
   const s = new Set(CFG.hero);
@@ -836,7 +845,7 @@ function loadMarkets(pri = 1) {
   marketsLoading = upbitGet("market/all?isDetails=false", pri).then(a => {
     MARKETS = a.filter(x => x.market.startsWith("KRW-")).map(x => ({sym: x.market, ko: x.korean_name, en: x.english_name}));
     ls.setJ("mk:all", {t: Date.now(), m: MARKETS});
-    HOTS.hot.forEach(h => coinItem(h.k.slice(6))); renderHots();
+    HOTS.hot.concat(HOTS.hotup).forEach(h => coinItem(h.k.slice(6))); renderHots();
   }).catch(() => {}).finally(() => { marketsLoading = null; });
   return marketsLoading;
 }
@@ -851,15 +860,19 @@ function coinItem(sym) {
 
 /* ================= 업비트 거래대금 상위 ================= */
 async function loadHot() {
-  if (!hasSpecial("hot")) return;
+  if (!hasSpecial("hot") && !hasSpecial("hotup")) return;
   try {
     const a = await upbitGet("ticker/all?quote_currencies=KRW", 1);
     const codes = new Set(wsCodes());
     a.forEach(t => { if (codes.has(t.market)) upbitTicker(Object.assign({code: t.market}, t)); });
     const top = a.slice().sort((x, y) => y.acc_trade_price_24h - x.acc_trade_price_24h).slice(0, 10);
     top.forEach(t => { coinItem(t.market); upbitTicker(Object.assign({code: t.market}, t)); });
-    setHots("hot", top.map(t => ({k: "upbit:" + t.market, vol: t.acc_trade_price_24h})));
-    HOTS.hot.forEach(h => loadUpbitSpark(h.k.slice(6)));
+    if (hasSpecial("hot")) setHots("hot", top.map(t => ({k: "upbit:" + t.market, vol: t.acc_trade_price_24h})));
+    /* 상승률 상위: 원화 코인 전체를 오늘 0시 대비 상승률 높은 순으로 */
+    const up = a.filter(t => isFinite(t.signed_change_rate)).sort((x, y) => y.signed_change_rate - x.signed_change_rate).slice(0, 10);
+    up.forEach(t => { coinItem(t.market); upbitTicker(Object.assign({code: t.market}, t)); });
+    if (hasSpecial("hotup")) setHots("hotup", up.map(t => ({k: "upbit:" + t.market, vol: t.acc_trade_price_24h})));
+    HOTS.hot.concat(HOTS.hotup).forEach(h => loadUpbitSpark(h.k.slice(6)));
   } catch (e) {}
 }
 function setHots(sp, list) {
@@ -1242,7 +1255,7 @@ function cleanupCustom() {
 }
 /* 목록이 바뀌면 필요한 시세·차트만 다시 받음 */
 function afterListChange(fromHot) {
-  if (!fromHot) { if (hasSpecial("hot") && !HOTS.hot.length) loadHot(); if (hasSpecial("hotkr") && !HOTS.hotkr.length) loadHotKR(); if (hasSpecial("hotus") && !HOTS.hotus.length) loadHotUS(); }
+  if (!fromHot) { if ((hasSpecial("hot") && !HOTS.hot.length) || (hasSpecial("hotup") && !HOTS.hotup.length)) loadHot(); if (hasSpecial("hotkr") && !HOTS.hotkr.length) loadHotKR(); if (hasSpecial("hotus") && !HOTS.hotus.length) loadHotUS(); }
   pollCNBC(); pollKR(); loadCNBCSparks(); loadUpbitSparks(); loadNaverSparks(); pollFxBackup();
   syncUpbitWS(); syncBinance();
 }
@@ -1272,7 +1285,7 @@ function addGroup() {
   const hotChk = el("div", {class: "rowbtns"}, ...Object.entries(SPECIALS).filter(([sp]) => !hasSpecial(sp)).map(([sp, d]) =>
     el("button", {class: "btn", style: "background:var(--line)", onclick: () => {
       CFG.groups.push({id: sp, name: d.name, special: sp, keys: []}); saveCfg(); closeOv(); build();
-      ({hot: loadHot, hotkr: loadHotKR, hotus: loadHotUS})[sp](); toast(`${d.name} 묶음을 넣었어요`);
+      ({hot: loadHot, hotup: loadHot, hotkr: loadHotKR, hotus: loadHotUS})[sp](); toast(`${d.name} 묶음을 넣었어요`);
     }}, `+ ${d.name}`)));
   const go = () => {
     const name = inp.value.trim().slice(0, 20); if (!name) { inp.focus(); return; }
@@ -1864,7 +1877,7 @@ function tickClock() {
 }
 applyTheme();
 tickClock(); setInterval(tickClock, 1000);
-HOTS.hot.forEach(h => coinItem(h.k.slice(6)));
+HOTS.hot.concat(HOTS.hotup).forEach(h => coinItem(h.k.slice(6)));
 HOTS.hotkr.forEach(h => krItem(h.k.slice(6), h.name));
 HOTS.hotus.forEach(h => { const sym = h.k.slice(5); if (!byKey[h.k]) byKey[h.k] = {src: "cnbc", sym, name: h.name || sym, sub: sym, ab: sym.slice(0, 4), dec: 2, usd: true, mk: "US", color: hueOf(sym), tmp: true}; });
 loadLast();
