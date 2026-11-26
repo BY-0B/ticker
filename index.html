@@ -107,6 +107,13 @@ svg.mini{display:block;width:100%;height:100%;overflow:visible}
 .cc .tg,.hc .tg{grid-column:1/3;grid-row:4;display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;max-height:17px;overflow:hidden}
 .tg .tag,.row .nm .sub .tag{flex:none;line-height:16px}
 .cc .tg:empty,.hc .tg:empty{display:none}
+/* 이름 줄: 이름 + 바로 옆 꼬리표 (김프, 환율 대비, 장 마감 등). 자리가 모자라면 이름이 먼저 줄어듦 */
+.nl{display:flex;align-items:center;gap:5px;min-width:0;overflow:hidden}
+.nl > b{flex:0 1 auto;min-width:0}
+.nt{display:flex;gap:3px;flex:none;max-width:62%;overflow:hidden}
+.nt:empty{display:none}
+.nt .tag{font-size:10px;padding:0 5px;line-height:16px}
+body.big .nt .tag{font-size:11.5px;padding:0 6px;line-height:18px}
 .cc .tg .tag,.hc .tg .tag{font-size:10.5px;padding:0 5px}
 .hc .pv > b{font-size:20px}
 
@@ -516,6 +523,16 @@ function fitNum(node, inner) {
   node.style.fontSize = Math.max(fs * 0.7, Math.floor(fs * w / need * 10) / 10) + "px";
 }
 addEventListener("resize", () => { fitGen++; clearTimeout(fitNum.t); fitNum.t = setTimeout(() => Object.keys(REF).forEach(k => paint(k, true)), 150); });
+/* 이름 옆에 꼬리표가 붙어 이름이 조금 넘치면 잘리기 전에 글자를 최대 80%까지 줄임 */
+function fitName(r) {
+  const b = r.nb; if (!b) return;
+  const key = fitGen + ":" + r.nt.textContent.length;
+  if (b._fit === key) return;
+  b._fit = key; b.style.fontSize = "";
+  if (!b.clientWidth || b.scrollWidth <= b.clientWidth + 0.5) return;
+  const fs = parseFloat(getComputedStyle(b).fontSize);
+  b.style.fontSize = Math.max(fs * 0.8, Math.floor(fs * b.clientWidth / b.scrollWidth * 10) / 10) + "px";
+}
 function chgText(st, it) {
   if (!st || !isFinite(st.pct)) return "-";
   const c = isFinite(st.chg) ? sign(st.chg) + fmt(Math.abs(st.chg), it, {noUnit: true}) + " " : "";
@@ -1082,18 +1099,18 @@ function clickable(k, cls, extra, ...kids) {
 /* 카드 (작은·큰 공용). place: {list, rank} */
 function cardEl(it, place, cls = "cc") {
   const k = key(it);
-  const r = {kind: cls === "hc" ? "hero" : "card", rank: place.rank, vol: place.vol, usd: place.usd, px: el("b", {class: "num"}), chg: el("span", {class: "num"}), sp: el("div", {class: "ch"}), tags: el("div", {class: "tg"})};
+  const r = {kind: cls === "hc" ? "hero" : "card", rank: place.rank, vol: place.vol, usd: place.usd, px: el("b", {class: "num"}), chg: el("span", {class: "num"}), sp: el("div", {class: "ch"}), tags: el("div", {class: "tg"}), nt: el("span", {class: "nt"})};
   addRef(k, r);
   return r.node = clickable(k, cls, null,
-    el("div", {class: "h"}, logo(it), el("div", {style: "min-width:0;display:flex;flex-direction:column"}, el("b", null, it.name), el("small", null, it.sub))),
+    el("div", {class: "h"}, logo(it), el("div", {style: "min-width:0;display:flex;flex-direction:column"}, el("span", {class: "nl"}, r.nb = el("b", null, it.name), r.nt), el("small", null, it.sub))),
     el("div", {class: "pv"}, r.px, r.chg), r.sp, r.tags,
     place.list ? delBtn(() => removeFrom(place.list, k), it.name) : null);
 }
 function rowEl(it, place) {
   const k = key(it);
-  const r = {kind: "row", sub: it.sub, rank: place.rank, vol: place.vol, usd: place.usd, px: el("b"), chg: el("span"), sp: el("div", {class: "sp"}), tags: el("span", {class: "sub"})};
+  const r = {kind: "row", sub: it.sub, rank: place.rank, vol: place.vol, usd: place.usd, px: el("b"), chg: el("span"), sp: el("div", {class: "sp"}), tags: el("span", {class: "sub"}), nt: el("span", {class: "nt"})};
   addRef(k, r);
-  return r.node = clickable(k, "row", null, logo(it), el("div", {class: "nm"}, el("b", null, it.name), r.tags), r.sp, el("div", {class: "px num"}, r.px, r.chg),
+  return r.node = clickable(k, "row", null, logo(it), el("div", {class: "nm"}, el("span", {class: "nl"}, r.nb = el("b", null, it.name), r.nt), r.tags), r.sp, el("div", {class: "px num"}, r.px, r.chg),
     place.list ? delBtn(() => removeFrom(place.list, k), it.name) : null);
 }
 function addTile(list, label) { return el("button", {class: "addtile", onclick: () => openAdd(list)}, label || "+ 추가"); }
@@ -1110,7 +1127,9 @@ function paint(k, noFlash) {
     else setChg(r.chg, ok && density === "big" ? chgAmt(st, it) : "", ok ? pctTxt(st.pct) : "-", "num start " + d);
     fitNum(r.px); fitNum(r.chg, r.chg.firstChild);
     r.tags.replaceChildren(...(r.kind === "row" ? [el("span", {class: "code"}, r.sub)] : []),
-      ...(r.rank ? [el("span", {class: "tag rank"}, `${r.rank}위 ${r.usd ? "$" + fmtUSD(r.vol) : fmtKRW(r.vol ?? st?.vol)}`)] : []), ...tagsFor(it, st));
+      ...(r.rank ? [el("span", {class: "tag rank"}, `${r.rank}위 ${r.usd ? "$" + fmtUSD(r.vol) : fmtKRW(r.vol ?? st?.vol)}`)] : []),
+      ...(r.kind === "hero" ? tagsFor(it, st) : []));
+    if (r.kind !== "hero") { r.nt.replaceChildren(...tagsFor(it, st)); fitName(r); }   // 김프·환율 대비·장 상태는 이름 바로 옆 (맨 위 큰 카드는 좁아서 아래 줄 그대로)
     const ready = st && isFinite(st.price);
     if (r.node) { r.node.classList.toggle("loading", !ready); r.node.classList.toggle("stale", !!st?.stale); }
     r.sp.classList.toggle("sk", !!ready && pts.length < 2 && !(it.src === "naver" && !naverProxy));
