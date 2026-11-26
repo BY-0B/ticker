@@ -294,6 +294,7 @@ body.big .row .px > b{font-size:15px} body.big .row .px > span{font-size:12px}
     <span class="clock num" id="clock">--:--:--</span>
     <div class="srcs" id="srcs"></div>
     <div class="seg" id="viewSeg"></div>
+    <button class="btn" id="rfBtn" title="전체 화면 그대로 시세를 새로 불러오기">새로고침</button>
     <button class="btn" id="editBtn">편집</button>
     <button class="btn" id="fsBtn" title="주소창 없이 꽉 차게">전체 화면</button>
     <button class="btn" id="wakeBtn" title="태블릿 화면이 꺼지지 않게">화면 켜두기</button>
@@ -1903,7 +1904,26 @@ document.addEventListener("visibilitychange", async () => {
 /* ================= 시작 ================= */
 $("ov").addEventListener("click", e => { if (e.target === $("ov")) closeOv(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") { if ($("ov").classList.contains("on")) closeOv(); else exitEdit(); } });
-$("setBtn").onclick = openSettings; $("wakeBtn").onclick = toggleWake; $("fsBtn").onclick = toggleFs;
+$("setBtn").onclick = openSettings; $("wakeBtn").onclick = toggleWake; $("fsBtn").onclick = toggleFs; $("rfBtn").onclick = softRefresh;
+/* 새로고침: 페이지를 다시 열지 않고 시세·차트·순위를 새로 받아서 전체 화면이 풀리지 않음.
+   시세판 자체가 새로 바뀌었으면 알려 주고, 한 번 더 누르면 페이지를 다시 엎 (이때만 전체 화면이 풀림) */
+let pageSig = null, updateReady = false;
+async function sigOf() { const t = await (await fetch(location.pathname + "?_=" + Date.now(), {cache: "no-store"})).text(); return t.length + ":" + t.slice(-300); }
+setTimeout(async () => { try { pageSig = await sigOf(); } catch (e) {} }, 8000);
+async function softRefresh() {
+  const b = $("rfBtn"); if (b.disabled) return;
+  if (updateReady) { location.reload(); return; }
+  b.disabled = true; b.textContent = "불러오는 중";
+  try {
+    try { const s = await sigOf(); if (pageSig && s !== pageSig) { updateReady = true; toast("시세판이 새로 바뀌었어요. 한 번 더 누르면 새 버전을 열어요 (전체 화면은 풀려요)"); return; } } catch (e) {}
+    if (!upWS || upWS.readyState > 1) connectUpbit();
+    loadHot();
+    await Promise.allSettled([pollCNBC(), pollKR(), pollFxBackup(), loadHotKR(), loadHotUS()]);
+    loadCNBCSparks(true); loadNaverSparks(); loadUpbitSparks();
+    build(); afterListChange(true);
+    toast("새로 불러왔어요");
+  } finally { b.disabled = false; b.textContent = updateReady ? "새 버전 열기" : "새로고침"; }
+}
 $("editBtn").onclick = () => { closeOv(); editing ? exitEdit() : enterEdit(); };
 $("addGroupBtn").onclick = addGroup;
 $("addHeroBtn").onclick = () => openAdd("hero");
