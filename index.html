@@ -128,9 +128,9 @@ body.big .cc .ch{height:84px;margin-top:6px}
 body.big .hc .ch{height:44px;margin-top:6px}
 
 /* 한눈에 보기: 여러 줄로 촘촘하게 */
-.lists{column-width:360px;column-gap:8px}
-.lists.one{column-width:420px}
-.lsec{background:var(--card);border-radius:14px;padding:2px 4px 4px;break-inside:avoid;margin-bottom:8px}
+.lists{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start}
+.lists.one{grid-template-columns:minmax(0,640px)}
+.lsec{background:var(--card);border-radius:14px;padding:2px 4px 4px;break-inside:avoid;min-width:0}
 .lsec .sec-h{margin:6px 8px 2px;min-height:24px}
 .lsec .sec-h h2{font-size:14px}
 .lsec .sec-h .note{display:none}
@@ -149,7 +149,7 @@ body.big .hc .ch{height:44px;margin-top:6px}
 .row .px{text-align:right;min-width:0;overflow:hidden}
 .row .px > b{display:inline-block;font-size:14.5px;font-weight:700;border-radius:5px;padding:0 3px;margin-right:-3px}
 .row .px > span{display:block;font-size:11.5px;font-weight:700}
-body.big .lists{columns:2 420px;column-gap:12px}
+body.big .lists{gap:12px}
 body.big .row{grid-template-columns:36px minmax(0,1fr) 110px 150px;gap:10px;padding:8px 10px}
 body.big .row .logo{width:36px;height:36px;font-size:11px}
 body.big .row .sp{height:30px;width:110px}
@@ -270,7 +270,7 @@ body.big .row .px > b{font-size:15px} body.big .row .px > span{font-size:12px}
 @media (max-width:560px){
   .hero,.cards{grid-template-columns:repeat(2,minmax(0,1fr))}
   body.big .cards,body.big .hero{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .lists,.lists.one{columns:1}.row .sp{display:none}.row{grid-template-columns:20px minmax(0,1fr) auto}
+  .lists,.lists.one{grid-template-columns:minmax(0,1fr)}.row .sp{display:none}.row{grid-template-columns:20px minmax(0,1fr) auto}
   .srcs{display:none}.big{font-size:28px}.per button{min-width:0;padding:0 9px}
   .sec-h .note{display:none}
 }
@@ -378,17 +378,17 @@ const key = it => it.src + ":" + it.sym;
 
 /* 처음 화면 구성 */
 const DEFAULT_CFG = () => ({
-  v: 4,
+  v: 5,
   hero: ["cnbc:.KS11", "cnbc:.KQ11", "cnbc:.SPX", "cnbc:.IXIC", "cnbc:.SOX", "upbit:KRW-BTC", "upbit:KRW-CTC", "cnbc:KRW="],
   groups: [
     {id: "idx", name: "지수", keys: [".KS11", ".KQ11", ".SPX", ".IXIC", ".SOX", ".DJI", ".VIX", ".N225", ".HSI", ".SSEC"].map(s => "cnbc:" + s)},
-    {id: "coin", name: "코인", keys: ["CTC", "USDS", "SKY", "BTC", "ETH", "XRP", "SOL", "DOGE", "USDT"].map(s => "upbit:KRW-" + s)},
+    {id: "fx", name: "환율·금리·원자재", keys: ["KRW=", "JPYKRW=", "EURKRW=", ".DXY", "US10Y", "@GC.1", "@SI.1", "@HG.1", "@CL.1"].map(s => "cnbc:" + s)},
     {id: "hot", name: "코인 거래대금 상위", special: "hot", keys: []},
-    {id: "us", name: "해외주식", keys: ["NVDA", "AAPL", "MSFT", "GOOGL", "AMZN", "META", "TSLA"].map(s => "cnbc:" + s)},
+    {id: "coin", name: "코인", sort: "pct", keys: ["CTC", "USDS", "SKY", "BTC", "ETH", "XRP", "SOL", "DOGE", "USDT"].map(s => "upbit:KRW-" + s)},
     {id: "kr", name: "국내주식", keys: ["005930", "000660", "373220", "005380", "035420", "035720", "068270", "105560"].map(s => "naver:" + s)},
     {id: "hotkr", name: "국내 거래대금 상위", special: "hotkr", keys: []},
+    {id: "us", name: "해외주식", keys: ["NVDA", "AAPL", "MSFT", "GOOGL", "AMZN", "META", "TSLA"].map(s => "cnbc:" + s)},
     {id: "hotus", name: "미국 거래대금 상위", special: "hotus", keys: []},
-    {id: "fx", name: "환율·금리·원자재", keys: ["KRW=", "JPYKRW=", "EURKRW=", ".DXY", "US10Y", "@GC.1", "@SI.1", "@CL.1"].map(s => "cnbc:" + s)},
   ],
   custom: {},
 });
@@ -417,7 +417,16 @@ function loadCfg() {
     c.groups.splice(at, 0, {id: "hotkr", name: "국내 거래대금 상위", special: "hotkr", keys: []}, {id: "hotus", name: "미국 거래대금 상위", special: "hotus", keys: []});
     c.v = 4; ls.setJ("cfg", c);
   }
-  if (c.v !== 4) return DEFAULT_CFG();
+  if (c.v === 4) {   // 짝 맞춰 배치: 지수|환율, 코인 거래대금|코인(등락률 순), 국내|국내 거래대금, 해외|미국 거래대금. 구리 추가
+    const order = ["idx", "fx", "hot", "coin", "kr", "hotkr", "us", "hotus"];
+    const rank = g => { const i = order.indexOf(g.id); return i < 0 ? 99 : i; };
+    c.groups = c.groups.map((g, i) => [g, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(x => x[0]);
+    const coin = c.groups.find(g => g.id === "coin"); if (coin) coin.sort = "pct";
+    const fx = c.groups.find(g => g.id === "fx");
+    if (fx && !fx.keys.includes("cnbc:@HG.1")) { const at = fx.keys.indexOf("cnbc:@SI.1"); fx.keys.splice(at < 0 ? fx.keys.length : at + 1, 0, "cnbc:@HG.1"); }
+    c.v = 5; ls.setJ("cfg", c);
+  }
+  if (c.v !== 5) return DEFAULT_CFG();
   c.custom = c.custom || {};
   c.groups = c.groups.filter(g => g && g.id && Array.isArray(g.keys));
   return c;
@@ -1123,13 +1132,13 @@ const listOf = n => n && n.parentElement && n.parentElement.dataset.list;
 document.addEventListener("pointerdown", e => {
   if (e.button > 0 || e.target.closest(".del,.addtile,button,input,select,a")) return;
   const item = e.target.closest("[data-list] > [data-k]"); if (!item) return;
-  if (editing) { if (!SPECIALS[listOf(item)]) { e.preventDefault(); startDrag(item, e); } return; }
+  if (editing) { if (!fixedList(listOf(item))) { e.preventDefault(); startDrag(item, e); } return; }
   clearTimeout(press?.t);
   press = {x: e.clientX, y: e.clientY, id: e.pointerId, t: setTimeout(() => {
     const p = press; press = null; if (!p) return;
     enterEdit();
     try { navigator.vibrate && navigator.vibrate(12); } catch (er) {}
-    if (!SPECIALS[listOf(item)]) startDrag(item, {clientX: p.x, clientY: p.y, pointerId: p.id});
+    if (!fixedList(listOf(item))) startDrag(item, {clientX: p.x, clientY: p.y, pointerId: p.id});
   }, 450)};
 });
 addEventListener("pointermove", e => { if (press && e.pointerId === press.id && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 8) { clearTimeout(press.t); press = null; } });
@@ -1176,7 +1185,7 @@ function onDragMove(ev) {
   if (!drag || ev.pointerId !== drag.id) return;
   drag.x = ev.clientX; drag.y = ev.clientY;
   const {item} = drag, from = item.parentElement, list = from.dataset.list;
-  const canGo = b => b && b.dataset.list && !SPECIALS[b.dataset.list] && (b === from || (list !== "hero" && b.dataset.list !== "hero"));
+  const canGo = b => b && b.dataset.list && !fixedList(b.dataset.list) && (b === from || (list !== "hero" && b.dataset.list !== "hero"));
   if (Date.now() > drag.cool) {
     const under = document.elementFromPoint(ev.clientX, ev.clientY);
     const over = under && under.closest("[data-list] > [data-k]");
@@ -1294,7 +1303,7 @@ function secHead(g) {
       el("button", {class: "btn", onclick: () => moveGroup(g.id, 1)}, "아래로"),
       el("button", {class: "btn danger", onclick: () => deleteGroup(g.id)}, confirmDel === g.id ? `종목 ${g.keys.length}개와 같이 지울까요? 한 번 더 누르기` : "묶음 지우기")));
   } else {
-    h.append(el("h2", null, g.name, el("small", null, srcSummary(g))));
+    h.append(el("h2", null, g.name, el("small", null, srcSummary(g) + (g.sort === "pct" ? " · 등락률 높은 순" : ""))));
     if (g.special) h.append(el("span", {class: "note"}, SPECIALS[g.special].note));
     else if (!naverProxy && g.keys.some(k => byKey[k]?.src === "naver")) h.append(el("span", {class: "note"}, "국내주식은 20분 늦은 시세"));
     else if (g.keys.some(k => byKey[k]?.src === "upbit")) h.append(el("span", {class: "note"}, "등락은 오전 9시 기준 · 김프는 바이낸스 × 달러/원"));
@@ -1319,6 +1328,24 @@ function fitHero() {
   h.style.gridTemplateColumns = `repeat(${Math.ceil(n / Math.ceil(n / per))},minmax(0,1fr))`;
 }
 addEventListener("resize", () => { clearTimeout(fitHero.t); fitHero.t = setTimeout(fitHero, 100); });
+/* 등락률 높은 순 묶음: 화면 순서를 자동으로 맞춤 (끌어서 옮기기는 안 됨) */
+const pctOf = k => isFinite(S[k]?.pct) ? S[k].pct : -Infinity;
+const viewKeys = g => g.sort === "pct" ? g.keys.slice().sort((a, b) => pctOf(b) - pctOf(a)) : g.keys;
+const fixedList = id => SPECIALS[id] || CFG.groups.some(g => g.id === id && g.sort);
+function resortGroups() {
+  if (drag) return;
+  CFG.groups.filter(g => g.sort === "pct").forEach(g => {
+    const box = document.querySelector(`[data-list="${g.id}"]`); if (!box) return;
+    const want = viewKeys(g), nodes = [...box.children].filter(n => n.dataset.k);
+    if (nodes.map(n => n.dataset.k).join() === want.join()) return;
+    const before = new Map(nodes.map(n => [n, n.getBoundingClientRect()]));
+    const tail = box.querySelector(".addtile");
+    want.forEach(k => { const n = nodes.find(x => x.dataset.k === k); if (n) box.insertBefore(n, tail); });
+    nodes.forEach(n => { const a = before.get(n), b = n.getBoundingClientRect(); const dx = (a.left - b.left) / Z(), dy = (a.top - b.top) / Z();
+      if (dx || dy) n.animate([{transform: `translate(${dx}px,${dy}px)`}, {transform: "none"}], {duration: 380, easing: "cubic-bezier(.2,.8,.2,1)"}); });
+  });
+}
+setInterval(resortGroups, 5000);
 function build() {
   fitGen++;
   for (const k in REF) delete REF[k];
@@ -1347,7 +1374,7 @@ function build() {
     const sec = el("section", {class: chartView ? "gsec" : "lsec", "data-g": g.id}, secHead(g));
     if (g.special) { const hb = el("div", {class: chartView ? "cards" : "", "data-list": g.special}); hotBoxes[g.special] = hb; sec.append(hb); }
     else {
-      const items = g.keys.map(k => byKey[k]).filter(Boolean);
+      const items = viewKeys(g).map(k => byKey[k]).filter(Boolean);
       const box = el("div", {class: chartView ? "cards" : "", "data-list": g.id});
       items.forEach(it => box.append(chartView ? cardEl(it, {list: g.id}) : rowEl(it, {list: g.id})));
       box.append(addTile(g.id));
