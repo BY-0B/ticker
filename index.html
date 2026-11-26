@@ -60,7 +60,10 @@ button{border:0;background:none;cursor:pointer}
 .tabs button:hover:not([aria-pressed="true"]){background:var(--card)}
 
 /* 공통 카드 */
-.logo{box-shadow:inset 0 0 0 1px var(--ring,rgba(0,0,0,.05));width:40px;height:40px;border-radius:50%;display:grid;place-items:center;flex:none;overflow:hidden;font-size:12px;font-weight:800;color:#fff;letter-spacing:-.03em}
+.logo{box-shadow:inset 0 0 0 1px var(--ring,rgba(0,0,0,.05));width:40px;height:40px;border-radius:50%;display:grid;place-items:center;flex:none;overflow:hidden;font-size:12px;font-weight:800;color:#fff;letter-spacing:-.03em;position:relative}
+.logo > img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0}
+.logo.has{background:#fff!important;color:transparent}
+.logo.has > img{opacity:1}
 .tag{font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px;background:var(--chip);color:var(--ink2);white-space:nowrap}
 .tag.live{color:var(--ok)} .tag.pre{color:var(--warn)} .tag.ours{background:var(--down-soft);color:var(--down)}
 .tag.kp-up{background:var(--up-soft);color:var(--up)} .tag.kp-down{background:var(--down-soft);color:var(--down)}
@@ -556,9 +559,23 @@ function el(tag, attrs, ...kids) {
 }
 const HUES = ["#3182f6", "#f04452", "#03b26c", "#ff9f00", "#8b5cf6", "#0ea5e9", "#e8590c", "#14b8a6", "#64748b", "#d946ef"];
 const hueOf = s => HUES[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % HUES.length];
+/* 실제 로고: 코인은 업비트, 주식·지수·원자재는 TradingView 로고. 못 받으면 글자 동그라미 그대로 */
+const LOGO_ID = Object.assign({"cnbc:SMCI":"super-micro-computer","cnbc:MU":"micron-technology","cnbc:CRM":"salesforce","cnbc:IONQ":"ionq","cnbc:AMZN":"amazon","cnbc:QCOM":"qualcomm","cnbc:INTC":"intel","cnbc:JPM":"jpmorgan-chase","cnbc:NFLX":"netflix","cnbc:SOFI":"sofi","cnbc:SPY":"spdr-sandp500-etf-tr","cnbc:MSTR":"microstrategy","cnbc:TQQQ":"proshares","cnbc:PLTR":"palantir","cnbc:V":"visa","cnbc:AAPL":"apple","cnbc:META":"meta-platforms","cnbc:SOXL":"direxion","cnbc:COIN":"coinbase","cnbc:ORCL":"oracle","cnbc:DIS":"walt-disney","cnbc:AMD":"advanced-micro-devices","cnbc:MSFT":"microsoft","cnbc:QQQ":"invesco","cnbc:HOOD":"robinhood","cnbc:NKE":"nike","cnbc:GOOGL":"alphabet","cnbc:UBER":"uber","cnbc:ARM":"arm","cnbc:AVGO":"broadcom","cnbc:IBIT":"ishares","cnbc:BABA":"alibaba","cnbc:TSLA":"tesla","cnbc:ADBE":"adobe","cnbc:KO":"coca-cola","cnbc:NVDA":"nvidia","cnbc:TSM":"taiwan-semiconductor","cnbc:ASML":"asml","cnbc:BRK.B":"berkshire-hathaway","naver:005930":"samsung","naver:000660":"sk-telecom","naver:373220":"lg-energy-solution","naver:207940":"samsung","naver:005380":"hyundai","naver:000270":"kia","naver:068270":"celltrion","naver:105560":"kb-financial","naver:055550":"shinhan-financial","naver:035420":"naver","naver:035720":"kakao","naver:005490":"posco","naver:006400":"samsung","naver:051910":"lg-display","naver:012330":"hyundai-mobis","naver:028260":"samsung","naver:012450":"hanwha-aerospace","naver:329180":"hyundai-heavy-industries","naver:009540":"ksoe","naver:034020":"dhico","naver:042700":"hanmi-semiconductor-co-ltd","naver:196170":"alteogen","naver:247540":"ecoprobm","naver:086520":"ecopro-co-ltd","naver:259960":"krafton","naver:323410":"kakaobank","naver:015760":"korea-electric-power","naver:066570":"lg-display","naver:086790":"hana-financial-gr","naver:011200":"hyundai-merc-mar","naver:017670":"sk-telecom","naver:030200":"kt","naver:010130":"kor-zinc","naver:003670":"posco-chemical","naver:005935":"samsung","cnbc:.KS11":"country/KR","cnbc:.KQ11":"country/KR","cnbc:.KS200":"country/KR","cnbc:.SPX":"indices/s-and-p-500","cnbc:.IXIC":"indices/nasdaq-composite","cnbc:.NDX":"indices/nasdaq-100","cnbc:.SOX":"country/US","cnbc:.DJI":"indices/dow-30","cnbc:.RUT":"indices/russell-2000","cnbc:.VIX":"indices/volatility-s-and-p-500","cnbc:.N225":"indices/nikkei-225","cnbc:.HSI":"indices/hang-seng","cnbc:.SSEC":"country/CN","cnbc:.TWII":"country/TW","cnbc:.GDAXI":"indices/dax","cnbc:.FTSE":"indices/uk-100","cnbc:.STOXX50E":"indices/euro-stoxx-50","cnbc:KRW=":"country/US","cnbc:JPYKRW=":"country/JP","cnbc:EURKRW=":"country/EU","cnbc:JPY=":"country/US","cnbc:EUR=":"country/EU","cnbc:CNY=":"country/US","cnbc:.DXY":"indices/u-s-dollar-index","cnbc:US10Y":"country/US","cnbc:US2Y":"country/US","cnbc:US30Y":"country/US","cnbc:@GC.1":"metal/gold","cnbc:@SI.1":"metal/silver","cnbc:@HG.1":"metal/copper","cnbc:@CL.1":"crude-oil","cnbc:@LCO.1":"crude-oil","cnbc:@NG.1":"natural-gas"}, ls.getJ("lgid") || {});
+function learnLogos(rows, toKey) {
+  let n = 0;
+  rows.forEach(r => { const id = r.d[TV_COLS.indexOf("logoid")], k = toKey(r); if (id && LOGO_ID[k] !== id) { LOGO_ID[k] = id; n++; } });
+  if (n) ls.setJ("lgid", LOGO_ID);
+}
+function logoUrl(it) {
+  if (it.src === "upbit") return "https://static.upbit.com/logos/" + it.sym.slice(4) + ".png";
+  const id = LOGO_ID[key(it)]; return id ? "https://s3-symbol-logo.tradingview.com/" + id + ".svg" : "";
+}
 function logo(it) {
   const label = it.ab || (it.src === "naver" ? it.name.slice(0, 2) : it.sub.replace(/[^A-Za-z0-9]/g, "").slice(0, 4) || it.name.slice(0, 2));
-  return el("span", {class: "logo", style: `background:${it.color || hueOf(it.sym)}`, "aria-hidden": "true"}, label);
+  const s = el("span", {class: "logo", style: `background:${it.color || hueOf(it.sym)}`, "aria-hidden": "true"}, label);
+  const u = logoUrl(it);
+  if (u) { const im = new Image(); im.alt = ""; im.decoding = "async"; im.onload = () => s.classList.add("has"); im.onerror = () => im.remove(); im.src = u; s.append(im); }
+  return s;
 }
 const srcLabel = it => ({cnbc: "CNBC", upbit: "업비트", naver: naverProxy ? "네이버 (실시간)" : "한국거래소 (20분 지연)"})[it.src];
 const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -907,7 +924,7 @@ async function tvScan(market, body) {
   if (!r.ok) throw new Error(r.status);
   return (await r.json()).data || [];
 }
-const TV_COLS = ["name", "description", "close", "change", "change_abs", "volume", "open", "high", "low", "Value.Traded", "update_mode"];
+const TV_COLS = ["name", "description", "close", "change", "change_abs", "volume", "open", "high", "low", "Value.Traded", "update_mode", "logoid"];
 function tvRow(d) { const o = {}; TV_COLS.forEach((c, i) => o[c] = d[i]); return o; }
 function krTick(code, o) {
   const k = "naver:" + code, st = S[k] || {};
@@ -940,6 +957,7 @@ async function loadHotKR() {
     const rows = await tvScan("korea", {filter: [{left: "type", operation: "equal", right: "stock"}, {left: "is_primary", operation: "equal", right: true}],
       columns: TV_COLS, sort: {sortBy: "Value.Traded", sortOrder: "desc"}, range: [0, 10]});
     let renamed = false;
+    learnLogos(rows, r => "naver:" + r.d[0]);
     rows.forEach(r => { const o = tvRow(r.d); const it = krItem(o.name), before = it.name; krItem(o.name, o.description); if (it.name !== before) renamed = true; krTick(o.name, o); });
     if (renamed) renderHots();
     setHots("hotkr", rows.map(r => ({k: "naver:" + r.d[0], vol: r.d[9], name: krName(r.d[1])})));
@@ -963,6 +981,7 @@ async function loadHotUS() {
   try {
     const rows = await tvScan("america", {filter: [{left: "type", operation: "equal", right: "stock"}, {left: "is_primary", operation: "equal", right: true}],
       columns: TV_COLS, sort: {sortBy: "Value.Traded", sortOrder: "desc"}, range: [0, 10]});
+    learnLogos(rows, r => "cnbc:" + r.d[0].replace("/", "."));
     let renamed = false;
     rows.forEach(r => {
       const sym = r.d[0].replace("/", "."), k = "cnbc:" + sym, name = US_KO[sym.replace(".", "_")] || usName(r.d[1]) || sym;
